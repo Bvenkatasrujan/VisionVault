@@ -17,17 +17,15 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: 'npm'
-          cache-dependency-path: desktop/package-lock.json
+          node-version: 22
 
       - name: Install Desktop Dependencies
         working-directory: desktop
-        run: npm ci
+        run: npm install
 
-      - name: Build Windows Installer (.exe)
+      - name: Build Vite & Package Windows Installer (.exe)
         working-directory: desktop
-        run: npm run dist
+        run: npx vite build && npx electron-builder --win nsis
 
       - name: Upload Installer Artifact
         uses: actions/upload-artifact@v4
@@ -37,7 +35,7 @@ jobs:
 
       - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           files: desktop/build_output/VisionVault Setup.exe
         env:
