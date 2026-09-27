@@ -29,12 +29,13 @@ jobs:
           if (Test-Path package-lock.json) { Remove-Item -Force package-lock.json }
           npm install --legacy-peer-deps
 
-      - name: Build Vite & Package Windows Installer (.exe)
+      - name: Build Vite Assets
         working-directory: desktop
-        shell: pwsh
-        run: |
-          npx vite build
-          npx electron-builder --win nsis
+        run: npx vite build
+
+      - name: Package Windows Installer (.exe)
+        working-directory: desktop
+        run: npx electron-builder --win nsis --x64
 
       - name: Upload Installer Artifact
         uses: actions/upload-artifact@v4
