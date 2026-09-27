@@ -34,7 +34,8 @@ import {
   User,
   RefreshCw,
   Eye,
-  EyeOff
+  EyeOff,
+  ArrowLeft
 } from 'lucide-react';
 
 export default function App() {
@@ -493,7 +494,13 @@ export default function App() {
 
     } catch (err) {
       console.error("Desktop Google login error details:", err);
-      setAuthError(err.message || "Google sign-in error.");
+      if (err.code === 'auth/popup-closed-by-user') {
+        setAuthError("Google Sign-In popup was closed. Please try again.");
+      } else if (err.code === 'auth/disallowed-useragent' || err.message?.includes('useragent')) {
+        setAuthError("Google Sign-In is restricted in embedded windows. Please sign in with your email & password.");
+      } else {
+        setAuthError(err.message || "Google sign-in error. Try signing in with email & password.");
+      }
     } finally {
       setGoogleLoading(false);
     }
@@ -555,16 +562,27 @@ export default function App() {
     setAppState('READY');
   };
 
-  // Logout handler
+  // Logout handler & reset to Sign In screen
   const handleLogout = async () => {
     try {
-      if (currentUser) {
+      if (currentUser && deviceInfo && deviceInfo.deviceId) {
         const deviceDocRef = doc(db, 'devices', deviceInfo.deviceId);
         await setDoc(deviceDocRef, { status: 'offline', lastSeenAt: serverTimestamp() }, { merge: true });
       }
       await signOut(auth);
     } catch (err) {
       console.error("Signout error:", err);
+    } finally {
+      setCurrentUser(null);
+      setAppState('ACCOUNT_NOT_CREATED');
+      setAuthMode('login');
+      setEmail('');
+      setPassword('');
+      setConfirmPassword('');
+      setFullName('');
+      setAuthError(null);
+      setVerifyErr(null);
+      setVerifyMsg(null);
     }
   };
 
@@ -749,6 +767,17 @@ export default function App() {
             </form>
           ) : (
             <form onSubmit={handleRegister} className="space-y-3">
+              <div className="flex items-center justify-between pb-2 border-b border-slate-800/80 mb-1">
+                <button
+                  type="button"
+                  onClick={() => { setAuthMode('login'); setAuthError(null); }}
+                  className="inline-flex items-center gap-1.5 text-xs text-brand-400 hover:text-brand-300 font-medium transition-colors"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                  <span>Back to Sign In</span>
+                </button>
+              </div>
+
               <div>
                 <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
                   Full Name
@@ -889,6 +918,18 @@ export default function App() {
     return (
       <div className="min-h-screen bg-[#0a0f1d] flex items-center justify-center p-6 relative">
         <div className="w-full max-w-md glass-panel p-7 rounded-3xl space-y-5 text-center shadow-2xl">
+          
+          <div className="flex items-center justify-between pb-2 border-b border-slate-800/80 text-left">
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-rose-400 font-medium transition-colors"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>Back to Sign In / Use Different Email</span>
+            </button>
+          </div>
+
           <div className="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-400 flex items-center justify-center mx-auto">
             <Mail className="w-7 h-7" />
           </div>
@@ -974,12 +1015,22 @@ export default function App() {
             </p>
           </div>
 
-          <button
-            onClick={handleContinueToConfiguration}
-            className="w-full py-3 rounded-xl font-bold text-xs uppercase tracking-wider bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-lg transition-all"
-          >
-            Continue Setup
-          </button>
+          <div className="space-y-2">
+            <button
+              onClick={handleContinueToConfiguration}
+              className="w-full py-3 rounded-xl font-bold text-xs uppercase tracking-wider bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-lg transition-all"
+            >
+              Continue Setup
+            </button>
+
+            <button
+              onClick={handleLogout}
+              className="w-full py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-rose-400 bg-slate-900 border border-slate-800 transition-all flex items-center justify-center gap-1.5"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>Back to Sign In / Switch Account</span>
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -991,6 +1042,17 @@ export default function App() {
       <div className="min-h-screen bg-[#0a0f1d] flex items-center justify-center p-6 relative">
         <div className="w-full max-w-md glass-panel p-7 rounded-3xl space-y-5 shadow-2xl border border-brand-500/30">
           
+          <div className="flex items-center justify-between pb-2 border-b border-slate-800/80">
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-rose-400 font-medium transition-colors"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>Back to Sign In / Switch Account</span>
+            </button>
+          </div>
+
           <div className="text-center space-y-1">
             <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-brand-600 to-indigo-600 text-white flex items-center justify-center mx-auto shadow-glow-blue mb-2">
               <Zap className="w-6 h-6 fill-white" />
