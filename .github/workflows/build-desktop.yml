@@ -17,11 +17,11 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20.x
+          node-version: 22
 
       - name: Install Desktop Dependencies
         working-directory: desktop
-        run: npm install --legacy-peer-deps
+        run: npm install --force --no-package-lock
 
       - name: Build Vite & Package Windows Installer (.exe)
         working-directory: desktop
