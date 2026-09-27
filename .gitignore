@@ -1,0 +1,41 @@
+# Dependencies
+node_modules/
+.pnpm-store
+
+# Build outputs
+dist/
+dist-electron/
+build/
+out/
+*.exe
+*.AppImage
+*.dmg
+*.zip
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment variables & Secrets
+.env
+.env.local
+.env.*.local
+secrets/
+firebase-service-account.json
+serviceAccountKey.json
+build_output/
+*.pem
+
+
+# IDE & OS
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Python
+__pycache__/
+*.pyc
+venv/
+.venv/

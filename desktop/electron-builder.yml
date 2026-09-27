@@ -1,0 +1,28 @@
+appId: com.visionvault.desktop
+productName: VisionVault Desktop
+artifactName: "VisionVault Setup.${ext}"
+copyright: Copyright © 2026 VisionVault
+
+directories:
+  output: build_output
+  buildResources: build
+
+files:
+  - "dist/**/*"
+  - "src/main/**/*"
+
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  icon: public/icon.ico
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: VisionVault Desktop
+  include: build/installer.nsh
+
