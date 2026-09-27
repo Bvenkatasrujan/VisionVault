@@ -55,14 +55,25 @@ export const Devices = () => {
 
       {/* Desktop App Setup Card */}
       <div className="glass-panel rounded-3xl p-6 border border-indigo-500/20 bg-gradient-to-br from-indigo-950/30 via-slate-900 to-slate-950 space-y-4">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center">
-            <Zap className="w-5 h-5 fill-indigo-400" />
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center">
+              <Zap className="w-5 h-5 fill-indigo-400" />
+            </div>
+            <div>
+              <h3 className="font-bold text-slate-100 text-base">VisionVault Desktop Client (.exe)</h3>
+              <p className="text-xs text-slate-400">Cross-Device File Teleportation & VLT Watcher</p>
+            </div>
           </div>
-          <div>
-            <h3 className="font-bold text-slate-100 text-base">VisionVault Desktop Client (.exe)</h3>
-            <p className="text-xs text-slate-400">Cross-Device File Teleportation & VLT Watcher</p>
-          </div>
+          <a
+            href="https://github.com/Bvenkatasrujan/VisionVault/releases/latest"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-500 hover:to-cyan-500 text-white font-semibold text-xs transition-all duration-200 shadow-lg shadow-indigo-500/20 active:scale-95"
+          >
+            <Download className="w-4 h-4" />
+            <span>Download Desktop Client (.exe)</span>
+          </a>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
