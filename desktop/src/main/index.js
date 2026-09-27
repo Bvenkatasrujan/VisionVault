@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, dialog, shell } from 'electron';
+import { app, BrowserWindow, ipcMain, dialog, shell, session } from 'electron';
 import path from 'path';
 import fs from 'fs';
 import os from 'os';
@@ -10,7 +10,7 @@ const __dirname = path.dirname(__filename);
 let mainWindow;
 let pendingTeleportFilesQueue = [];
 
-const CHROME_USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
+const CHROME_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
 
 // Helper to validate and extract file info securely
 function validateAndGetFileInfo(targetFilePath) {
@@ -106,6 +106,7 @@ function createWindow() {
         width: 600,
         height: 700,
         autoHideMenuBar: true,
+        userAgent: CHROME_USER_AGENT,
         webPreferences: {
           nodeIntegration: false,
           contextIsolation: true
@@ -135,6 +136,14 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
+  // Strip Electron identifier from request headers to allow Google OAuth popup login
+  if (session && session.defaultSession) {
+    session.defaultSession.webRequest.onBeforeSendHeaders((details, callback) => {
+      details.requestHeaders['User-Agent'] = CHROME_USER_AGENT;
+      callback({ cancel: false, requestHeaders: details.requestHeaders });
+    });
+  }
+
   createWindow();
 
   app.on('activate', () => {

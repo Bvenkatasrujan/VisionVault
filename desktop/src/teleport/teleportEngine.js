@@ -1,7 +1,46 @@
 import { getCurrentFirebaseIdToken } from '../services/firebaseAuth';
 import { isVltFilename, createVltPackageFromFile } from './vltEngine';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
+const PRIMARY_API_URL = import.meta.env.VITE_API_URL || 'https://visionvault-api.onrender.com';
+const FALLBACK_ENDPOINTS = [
+  PRIMARY_API_URL,
+  'https://visionvault-api.onrender.com',
+  'http://127.0.0.1:8000'
+];
+
+// Helper to attempt fetch across endpoints with auto-retry & Render wake-up support
+const fetchWithEndpointFallback = async (endpointPath, fetchOptions, onStatusChange) => {
+  let lastError = null;
+  const targetEndpoints = Array.from(new Set(FALLBACK_ENDPOINTS.filter(Boolean)));
+
+  for (let i = 0; i < targetEndpoints.length; i++) {
+    const baseUrl = targetEndpoints[i];
+    const cleanBase = baseUrl.replace(/\/+$/, '');
+    const fullUrl = `${cleanBase}${endpointPath}`;
+    
+    // Attempt up to 2 retries per endpoint (handles Render cold start)
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        if (onStatusChange && attempt === 2) {
+          onStatusChange('waking_up', { status: 'waking_up', detail: 'Waking up cloud server...' });
+        }
+        const response = await fetch(fullUrl, fetchOptions);
+        return response;
+      } catch (err) {
+        console.warn(`Fetch attempt ${attempt} failed for ${fullUrl}:`, err.message);
+        lastError = err;
+        if (attempt < 2) {
+          await new Promise(r => setTimeout(r, 1000));
+        }
+      }
+    }
+  }
+
+  // If all endpoints failed
+  throw new Error(
+    `Unable to connect to VisionVault API server at ${PRIMARY_API_URL}. Please verify your internet connection or check backend server status.`
+  );
+};
 
 export const teleportFileToCloud = async ({
   file,
@@ -26,30 +65,41 @@ export const teleportFileToCloud = async ({
     if (onStatusChange) onStatusChange('uploading', { status: 'uploading', fileName: uploadTargetFile.name });
     if (onProgress) onProgress(30);
 
-    const formData = new FormData();
-    formData.append('file', uploadTargetFile);
-    formData.append('deviceId', deviceId || 'desktop_win');
-    formData.append('asVlt', asVlt ? 'true' : 'false');
+    const createFormData = () => {
+      const formData = new FormData();
+      formData.append('file', uploadTargetFile);
+      formData.append('deviceId', deviceId || 'desktop_win');
+      formData.append('asVlt', asVlt ? 'true' : 'false');
+      return formData;
+    };
 
-    let response = await fetch(`${API_BASE_URL}/api/teleport/upload`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${idToken}`
+    let response = await fetchWithEndpointFallback(
+      '/api/teleport/upload',
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${idToken}`
+        },
+        body: createFormData()
       },
-      body: formData
-    });
+      onStatusChange
+    );
 
     // If 401 Unauthorized, force refresh token once and retry request once
     if (response.status === 401) {
       console.warn("Teleport request returned 401. Refreshing ID token and retrying once...");
       idToken = await getCurrentFirebaseIdToken(true);
-      response = await fetch(`${API_BASE_URL}/api/teleport/upload`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${idToken}`
+      response = await fetchWithEndpointFallback(
+        '/api/teleport/upload',
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${idToken}`
+          },
+          body: createFormData()
         },
-        body: formData
-      });
+        onStatusChange
+      );
     }
 
     if (onProgress) onProgress(85);
@@ -74,7 +124,10 @@ export const teleportFileToCloud = async ({
 
   } catch (err) {
     console.error("Teleport Execution Error:", err);
-    if (onStatusChange) onStatusChange('failed', { status: 'failed', error: err.message });
-    throw err;
+    const friendlyMsg = err.message.includes('Failed to fetch') 
+      ? `Unable to connect to VisionVault server at ${PRIMARY_API_URL}. Check your network connection.`
+      : err.message;
+    if (onStatusChange) onStatusChange('failed', { status: 'failed', error: friendlyMsg });
+    throw new Error(friendlyMsg);
   }
 };
