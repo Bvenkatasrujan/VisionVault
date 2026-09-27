@@ -30,7 +30,19 @@ def initialize_firebase_admin():
     if firebase_admin._apps:
         return
 
-    # 1. Try auto-detecting or configured Firebase service account JSON file
+    # 1. Try FIREBASE_CREDENTIALS_JSON environment variable (e.g. on Render/cloud hosting)
+    raw_env_json = os.getenv("FIREBASE_CREDENTIALS_JSON")
+    if raw_env_json:
+        try:
+            cred_dict = json.loads(raw_env_json)
+            cred = credentials.Certificate(cred_dict)
+            firebase_admin.initialize_app(cred, options={'projectId': FIREBASE_PROJECT_ID})
+            print("✓ Firebase Admin SDK initialized successfully via FIREBASE_CREDENTIALS_JSON environment variable.")
+            return
+        except Exception as e:
+            print(f"⚠ Error initializing Firebase Admin via FIREBASE_CREDENTIALS_JSON: {e}")
+
+    # 2. Try auto-detecting or configured Firebase service account JSON file
     sa_path = find_service_account_file()
     if sa_path and os.path.exists(sa_path):
         try:
@@ -41,7 +53,7 @@ def initialize_firebase_admin():
         except Exception as e:
             print(f"⚠ Error initializing Firebase Admin with service account at '{sa_path}': {e}")
 
-    # 2. Try GOOGLE_APPLICATION_CREDENTIALS
+    # 3. Try GOOGLE_APPLICATION_CREDENTIALS
     gac_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
     if gac_path and os.path.exists(gac_path):
         try:
@@ -52,7 +64,7 @@ def initialize_firebase_admin():
         except Exception as e:
             print(f"⚠ Error initializing via GOOGLE_APPLICATION_CREDENTIALS: {e}")
 
-    # 3. Fallback: Initialize with projectId
+    # 4. Fallback: Initialize with projectId
     try:
         firebase_admin.initialize_app(options={'projectId': FIREBASE_PROJECT_ID})
         print("⚠ Firebase Admin SDK initialized with projectId only.")
