@@ -17,14 +17,18 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 20
 
-      - name: Install Desktop Dependencies
+      - name: Clean & Install Desktop Dependencies
         working-directory: desktop
-        run: npm install --force --no-package-lock
+        shell: pwsh
+        run: |
+          if (Test-Path package-lock.json) { Remove-Item -Force package-lock.json }
+          npm install --legacy-peer-deps
 
       - name: Build Vite & Package Windows Installer (.exe)
         working-directory: desktop
+        shell: pwsh
         run: |
           npx vite build
           npx electron-builder --win nsis
