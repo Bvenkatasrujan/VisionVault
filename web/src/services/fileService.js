@@ -12,9 +12,9 @@ import { isVltFile, createVltPackage } from '../utils/vltHandler';
 
 const PRIMARY_API_URL = import.meta.env.VITE_API_URL || 'https://visionvault-api.onrender.com';
 const FALLBACK_ENDPOINTS = [
+  'http://127.0.0.1:8000',
   PRIMARY_API_URL,
-  'https://visionvault-api.onrender.com',
-  'http://127.0.0.1:8000'
+  'https://visionvault-api.onrender.com'
 ];
 
 const fetchWithApiFallback = async (endpointPath, fetchOptions) => {

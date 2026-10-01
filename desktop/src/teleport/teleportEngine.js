@@ -3,9 +3,9 @@ import { isVltFilename, createVltPackageFromFile } from './vltEngine';
 
 const PRIMARY_API_URL = import.meta.env.VITE_API_URL || 'https://visionvault-api.onrender.com';
 const FALLBACK_ENDPOINTS = [
+  'http://127.0.0.1:8000',
   PRIMARY_API_URL,
-  'https://visionvault-api.onrender.com',
-  'http://127.0.0.1:8000'
+  'https://visionvault-api.onrender.com'
 ];
 
 // Helper to attempt fetch across endpoints with auto-retry & Render wake-up support
