@@ -12,18 +12,24 @@ def find_service_account_file():
     if FIREBASE_SERVICE_ACCOUNT_PATH and os.path.exists(FIREBASE_SERVICE_ACCOUNT_PATH):
         return FIREBASE_SERVICE_ACCOUNT_PATH
     
-    # 2. Search secrets directory for any json file with service_account
-    secrets_dir = os.path.dirname(FIREBASE_SERVICE_ACCOUNT_PATH)
-    if os.path.exists(secrets_dir):
-        json_files = glob.glob(os.path.join(secrets_dir, "*.json"))
-        for file_path in json_files:
-            try:
-                with open(file_path, "r", encoding="utf-8") as f:
-                    data = json.load(f)
-                    if data.get("type") == "service_account" and data.get("project_id") == FIREBASE_PROJECT_ID:
-                        return file_path
-            except Exception:
-                continue
+    # 2. Search secrets directory for any json file containing service_account
+    search_dirs = [
+        os.path.dirname(FIREBASE_SERVICE_ACCOUNT_PATH),
+        os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "secrets"),
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    ]
+
+    for secrets_dir in search_dirs:
+        if os.path.exists(secrets_dir):
+            json_files = glob.glob(os.path.join(secrets_dir, "*.json"))
+            for file_path in json_files:
+                try:
+                    with open(file_path, "r", encoding="utf-8") as f:
+                        data = json.load(f)
+                        if data.get("type") == "service_account" and data.get("project_id") == FIREBASE_PROJECT_ID:
+                            return file_path
+                except Exception:
+                    continue
     return None
 
 def initialize_firebase_admin():
@@ -46,6 +52,7 @@ def initialize_firebase_admin():
     sa_path = find_service_account_file()
     if sa_path and os.path.exists(sa_path):
         try:
+            os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = sa_path
             cred = credentials.Certificate(sa_path)
             firebase_admin.initialize_app(cred, options={'projectId': FIREBASE_PROJECT_ID})
             print(f"✓ Firebase Admin SDK initialized successfully with service account at: {sa_path}")
@@ -68,7 +75,6 @@ def initialize_firebase_admin():
     try:
         firebase_admin.initialize_app(options={'projectId': FIREBASE_PROJECT_ID})
         print("⚠ Firebase Admin SDK initialized with projectId only.")
-        print(f"⚠ ACTION REQUIRED: Place your Firebase Admin private key JSON in 'cv-service/secrets/' to enable backend token verification.")
     except Exception as e:
         print(f"Warning: Firebase Admin fallback initialization error: {e}")
 
