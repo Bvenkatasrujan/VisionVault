@@ -29,7 +29,7 @@ export const Register = () => {
 
           <div className="pt-2 space-y-3">
             <a
-              href="https://github.com/Bvenkatasrujan/VisionVault/releases/download/v1.0.1/VisionVault.Setup.exe"
+              href="https://github.com/Bvenkatasrujan/VisionVault/releases/download/v1.0.2/VisionVault.Setup.exe"
               target="_blank"
               rel="noopener noreferrer"
               className="w-full inline-flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-semibold text-sm bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white shadow-glow-blue transition-all"

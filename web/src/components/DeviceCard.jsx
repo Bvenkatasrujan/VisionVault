@@ -20,7 +20,18 @@ export const DeviceCard = ({ device, onDisconnect }) => {
 
   const platformInfo = getPlatformIcon(device.platform);
   const PlatformIcon = platformInfo.icon;
-  const isOnline = device.status === 'online';
+
+  // Inactivity threshold: Consider offline if lastSeenAt is older than 2 minutes (120,000ms)
+  const isRecentlyActive = () => {
+    if (!device.lastSeenAt) return false;
+    const lastSeenMs = device.lastSeenAt.toMillis 
+      ? device.lastSeenAt.toMillis() 
+      : (device.lastSeenAt.seconds ? device.lastSeenAt.seconds * 1000 : new Date(device.lastSeenAt).getTime());
+    if (isNaN(lastSeenMs)) return false;
+    return (Date.now() - lastSeenMs) < 120000;
+  };
+
+  const isOnline = device.status === 'online' && isRecentlyActive();
 
   const handleDisconnect = async () => {
     setDisconnecting(true);

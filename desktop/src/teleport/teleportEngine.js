@@ -18,19 +18,19 @@ const fetchWithEndpointFallback = async (endpointPath, fetchOptions, onStatusCha
     const cleanBase = baseUrl.replace(/\/+$/, '');
     const fullUrl = `${cleanBase}${endpointPath}`;
     
-    // Attempt up to 2 retries per endpoint (handles Render cold start)
-    for (let attempt = 1; attempt <= 2; attempt++) {
+    // Attempt up to 5 retries per endpoint to allow Render free tier backend to spin up (cold start ~30s)
+    for (let attempt = 1; attempt <= 5; attempt++) {
       try {
-        if (onStatusChange && attempt === 2) {
-          onStatusChange('waking_up', { status: 'waking_up', detail: 'Waking up cloud server...' });
+        if (onStatusChange && attempt >= 2) {
+          onStatusChange('waking_up', { status: 'waking_up', detail: `Waking up cloud server (attempt ${attempt}/5)...` });
         }
         const response = await fetch(fullUrl, fetchOptions);
         return response;
       } catch (err) {
         console.warn(`Fetch attempt ${attempt} failed for ${fullUrl}:`, err.message);
         lastError = err;
-        if (attempt < 2) {
-          await new Promise(r => setTimeout(r, 1000));
+        if (attempt < 5) {
+          await new Promise(r => setTimeout(r, 3000));
         }
       }
     }
@@ -38,7 +38,7 @@ const fetchWithEndpointFallback = async (endpointPath, fetchOptions, onStatusCha
 
   // If all endpoints failed
   throw new Error(
-    `Unable to connect to VisionVault API server at ${PRIMARY_API_URL}. Please verify your internet connection or check backend server status.`
+    `Unable to connect to VisionVault API server at ${PRIMARY_API_URL}. The server may be waking up or offline. Please try again in a few seconds.`
   );
 };
 

@@ -12,10 +12,21 @@ app = FastAPI(
     version="2.0.0"
 )
 
-# Enable CORS for Web portal (3000) and Desktop Electron renderer (5174/local)
+# Configure CORS origins for Vercel production website, local development, and Electron
+ALLOWED_ORIGINS = [
+    "https://visionvault-web.vercel.app",
+    "https://visionvault.vercel.app",
+    "http://localhost:5173",
+    "http://localhost:5174",
+    "http://localhost:3000",
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:5174",
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
+    allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

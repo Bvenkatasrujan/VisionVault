@@ -1,7 +1,8 @@
 import JSZip from 'jszip';
 
 /**
- * VisionVault Teleport File (.vlt) Handler
+ * VisionVault Transfer Package (.vlt) Web Handler
+ * Standard: VisionVault Transfer (VLT) v1
  */
 
 export const isVltFile = (file) => {
@@ -12,7 +13,8 @@ export const isVltFile = (file) => {
 
 export const sanitizePathName = (name) => {
   if (!name) return "unnamed_file";
-  return name.replace(/[\/\\:\*\?"<>\|]/g, '_').replace(/\.\.+/g, '.').trim() || "unnamed_file";
+  const clean = name.replace(/[\/\\:\*\?"<>\|]/g, '_').replace(/\.\.+/g, '.').trim();
+  return clean || "unnamed_file";
 };
 
 export const calculateSha256 = async (arrayBuffer) => {
@@ -21,34 +23,111 @@ export const calculateSha256 = async (arrayBuffer) => {
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 };
 
-/**
- * Creates a .vlt package using JSZip container format
- */
-export const createVltPackage = async (file) => {
-  const arrayBuffer = await file.arrayBuffer();
-  const checksum = await calculateSha256(arrayBuffer);
-  const cleanName = sanitizePathName(file.name);
-  const fileId = `file_vlt_${Date.now()}_${Math.random().toString(36).substr(2, 7)}`;
+const deriveAesKeyFromPassword = async (password, saltBuffer) => {
+  const enc = new TextEncoder();
+  const keyMaterial = await crypto.subtle.importKey(
+    'raw',
+    enc.encode(password),
+    'PBKDF2',
+    false,
+    ['deriveKey']
+  );
 
-  const metadata = {
-    format: "VisionVault Teleport File",
-    version: "1.0",
-    fileId: fileId,
-    originalName: cleanName,
-    displayName: cleanName,
-    extension: cleanName.includes('.') ? `.${cleanName.split('.').pop().toLowerCase()}` : '',
-    mimeType: file.type || "application/octet-stream",
-    size: file.size,
-    checksumAlgorithm: "SHA-256",
-    checksum: checksum,
+  return await crypto.subtle.deriveKey(
+    {
+      name: 'PBKDF2',
+      salt: saltBuffer,
+      iterations: 100000,
+      hash: 'SHA-256'
+    },
+    keyMaterial,
+    { name: 'AES-GCM', length: 256 },
+    false,
+    ['encrypt', 'decrypt']
+  );
+};
+
+export const encryptPayloadWithPassword = async (arrayBuffer, password) => {
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const key = await deriveAesKeyFromPassword(password, salt);
+
+  const encryptedBuffer = await crypto.subtle.encrypt(
+    { name: 'AES-GCM', iv: iv },
+    key,
+    arrayBuffer
+  );
+
+  return {
+    encryptedBuffer,
+    salt: Array.from(salt),
+    iv: Array.from(iv)
+  };
+};
+
+export const decryptPayloadWithPassword = async (encryptedBuffer, password, saltArray, ivArray) => {
+  try {
+    const salt = new Uint8Array(saltArray);
+    const iv = new Uint8Array(ivArray);
+    const key = await deriveAesKeyFromPassword(password, salt);
+
+    const decrypted = await crypto.subtle.decrypt(
+      { name: 'AES-GCM', iv: iv },
+      key,
+      encryptedBuffer
+    );
+    return decrypted;
+  } catch (err) {
+    throw new Error("Incorrect password or authentication verification failed.");
+  }
+};
+
+export const createVltPackage = async (file, options = {}) => {
+  const { password = null } = options;
+  const rawArrayBuffer = await file.arrayBuffer();
+  const checksum = await calculateSha256(rawArrayBuffer);
+  const cleanName = sanitizePathName(file.name);
+  const ext = cleanName.includes('.') ? `.${cleanName.split('.').pop().toLowerCase()}` : '';
+
+  let finalPayloadBuffer = rawArrayBuffer;
+  let encryptionMeta = { protected: false };
+
+  if (password && password.trim().length > 0) {
+    const encResult = await encryptPayloadWithPassword(rawArrayBuffer, password);
+    finalPayloadBuffer = encResult.encryptedBuffer;
+    encryptionMeta = {
+      protected: true,
+      algorithm: "AES-256-GCM",
+      kdf: "PBKDF2",
+      iterations: 100000,
+      salt: encResult.salt,
+      iv: encResult.iv
+    };
+  }
+
+  const manifest = {
+    format: "VisionVault Transfer",
+    type: "VLT",
+    version: 1,
+    file: {
+      originalName: cleanName,
+      size: file.size,
+      mimeType: file.type || "application/octet-stream",
+      extension: ext
+    },
+    integrity: {
+      algorithm: "SHA-256",
+      checksum: checksum
+    },
+    encryption: encryptionMeta,
     createdAt: new Date().toISOString(),
-    source: "web"
+    source: "VisionVault Web"
   };
 
   const zip = new JSZip();
-  zip.file("metadata.json", JSON.stringify(metadata, null, 2));
-  zip.file("payload", arrayBuffer);
-  zip.file("checksum.sha256", checksum);
+  zip.file("manifest.json", JSON.stringify(manifest, null, 2));
+  zip.file(`payload/${cleanName}`, finalPayloadBuffer);
+  zip.file("integrity.sha256", checksum);
 
   const vltBlob = await zip.generateAsync({
     type: "blob",
@@ -57,78 +136,109 @@ export const createVltPackage = async (file) => {
     compressionOptions: { level: 6 }
   });
 
-  const vltFileName = cleanName.endsWith('.vlt') ? cleanName : `${cleanName}.vlt`;
+  const vltFileName = isVltFile(file) ? cleanName : `${cleanName}.vlt`;
   const vltFile = new File([vltBlob], vltFileName, { type: "application/vnd.visionvault.teleport+zip" });
 
   return {
     vltFile,
-    metadata,
+    manifest,
     checksum
   };
 };
 
-/**
- * Parses and verifies a .vlt package (supports both JSZip container & legacy JSON format)
- */
-export const parseVltPackage = async (fileOrBlob) => {
-  // 1. Try JSZip container format first
+export const parseVltPackage = async (fileOrBlob, passwordPromptHandler = null) => {
+  let zip;
   try {
     const arrayBuffer = await fileOrBlob.arrayBuffer();
-    const zip = await JSZip.loadAsync(arrayBuffer);
-    
-    const metadataFile = zip.file("metadata.json");
-    const payloadFile = zip.file("payload");
-
-    if (metadataFile && payloadFile) {
-      const metadataText = await metadataFile.async("string");
-      const metadata = JSON.parse(metadataText);
-      const payloadBuffer = await payloadFile.async("arraybuffer");
-      const calculatedChecksum = await calculateSha256(payloadBuffer);
-
-      const payloadBlob = new Blob([payloadBuffer], { type: metadata.mimeType || "application/octet-stream" });
-      const payloadUrl = URL.createObjectURL(payloadBlob);
-
-      return {
-        format: metadata.format || "VisionVault Teleport File",
-        vltVersion: metadata.version || "1.0",
-        fileId: metadata.fileId || `file_vlt_${Date.now()}`,
-        originalName: metadata.originalName || "extracted_file",
-        originalType: metadata.mimeType || "application/octet-stream",
-        size: metadata.size || payloadBuffer.byteLength,
-        checksum: metadata.checksum || calculatedChecksum,
-        checksumValid: metadata.checksum ? (metadata.checksum === calculatedChecksum) : true,
-        createdAt: metadata.createdAt || new Date().toISOString(),
-        payload: payloadUrl,
-        payloadBlob: payloadBlob
-      };
-    }
+    zip = await JSZip.loadAsync(arrayBuffer);
   } catch (zipErr) {
-    // If not a ZIP file, fall back to parsing JSON format below
+    throw new Error("Invalid VLT file: Package is not a valid ZIP VisionVault container archive.");
   }
 
-  // 2. Fallback: Parse legacy JSON container format
+  const manifestFile = zip.file("manifest.json") || zip.file("metadata.json");
+  const checksumFile = zip.file("integrity.sha256") || zip.file("checksum.sha256");
+
+  if (!manifestFile) {
+    throw new Error("Corrupted VLT file: Missing manifest.json container descriptor.");
+  }
+
+  const manifestText = await manifestFile.async("string");
+  let manifest;
   try {
-    const text = await fileOrBlob.text();
-    const data = JSON.parse(text);
-    if (data && (data.format === "VisionVault Teleport File" || data.format === "VLT")) {
-      return {
-        format: data.format,
-        vltVersion: data.version || "1.0",
-        fileId: data.fileId || `file_vlt_${Date.now()}`,
-        originalName: data.originalName || "extracted_file",
-        originalType: data.mimeType || "application/octet-stream",
-        size: data.size || 0,
-        checksum: data.checksum || "n/a",
-        checksumValid: true,
-        createdAt: data.createdAt || new Date().toISOString(),
-        payload: data.payload,
-        payloadBlob: null
-      };
-    }
-  } catch (jsonErr) {
-    // Both failed
+    manifest = JSON.parse(manifestText);
+  } catch (e) {
+    throw new Error("Corrupted VLT file: manifest.json is invalid JSON.");
   }
 
-  throw new Error("Could not parse .vlt package envelope. File is corrupted or uses an unsupported container format.");
+  const isVltFormat = manifest.format === "VisionVault Transfer" || manifest.format === "VisionVault Teleport File" || manifest.type === "VLT";
+  if (!isVltFormat) {
+    throw new Error("Invalid VLT format: Unrecognized container format identifier.");
+  }
+
+  let payloadFile = null;
+  zip.forEach((relativePath, zipEntry) => {
+    if (relativePath.includes('..') || relativePath.startsWith('/') || relativePath.startsWith('\\')) {
+      return;
+    }
+    if (!zipEntry.dir && (relativePath.startsWith('payload/') || relativePath === 'payload')) {
+      payloadFile = zipEntry;
+    }
+  });
+
+  if (!payloadFile) {
+    throw new Error("Corrupted VLT file: No payload file found in package.");
+  }
+
+  let rawPayloadBuffer = await payloadFile.async("arraybuffer");
+
+  const isProtected = Boolean(manifest.encryption?.protected);
+  if (isProtected) {
+    let password = null;
+    if (typeof passwordPromptHandler === 'function') {
+      password = await passwordPromptHandler(manifest.file?.originalName || "VLT Package");
+    }
+    if (!password) {
+      throw new Error("Password required to decrypt this protected VLT package.");
+    }
+
+    const { salt, iv } = manifest.encryption;
+    rawPayloadBuffer = await decryptPayloadWithPassword(rawPayloadBuffer, password, salt, iv);
+  }
+
+  const calculatedChecksum = await calculateSha256(rawPayloadBuffer);
+  const expectedChecksum = manifest.integrity?.checksum || manifest.checksum;
+
+  if (expectedChecksum && expectedChecksum !== calculatedChecksum) {
+    throw new Error("VLT integrity verification failed. The package may be corrupted or modified.");
+  }
+
+  if (checksumFile) {
+    const textChecksum = (await checksumFile.async("string")).trim();
+    if (textChecksum !== calculatedChecksum) {
+      throw new Error("VLT integrity verification failed. Checksum mismatch in integrity.sha256.");
+    }
+  }
+
+  const originalName = sanitizePathName(manifest.file?.originalName || manifest.originalName || "extracted_file");
+  const mimeType = manifest.file?.mimeType || manifest.mimeType || "application/octet-stream";
+
+  const payloadBlob = new Blob([rawPayloadBuffer], { type: mimeType });
+  const payloadUrl = URL.createObjectURL(payloadBlob);
+
+  return {
+    format: manifest.format,
+    vltVersion: manifest.version || "1.0",
+    fileId: `file_vlt_${Date.now()}`,
+    originalName: originalName,
+    originalType: mimeType,
+    size: manifest.file?.size || rawPayloadBuffer.byteLength,
+    checksum: calculatedChecksum,
+    checksumValid: true,
+    protected: isProtected,
+    createdAt: manifest.createdAt || new Date().toISOString(),
+    payload: payloadUrl,
+    payloadBlob: payloadBlob
+  };
 };
+
 

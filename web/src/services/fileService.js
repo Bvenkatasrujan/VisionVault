@@ -25,22 +25,22 @@ const fetchWithApiFallback = async (endpointPath, fetchOptions) => {
     const cleanBase = baseUrl.replace(/\/+$/, '');
     const fullUrl = `${cleanBase}${endpointPath}`;
     
-    for (let attempt = 1; attempt <= 2; attempt++) {
+    for (let attempt = 1; attempt <= 5; attempt++) {
       try {
         const response = await fetch(fullUrl, fetchOptions);
         return response;
       } catch (err) {
         console.warn(`Fetch attempt ${attempt} failed for ${fullUrl}:`, err.message);
         lastError = err;
-        if (attempt < 2) {
-          await new Promise(r => setTimeout(r, 1000));
+        if (attempt < 5) {
+          await new Promise(r => setTimeout(r, 3000));
         }
       }
     }
   }
 
   throw new Error(
-    `Unable to connect to VisionVault API server at ${PRIMARY_API_URL}. Please check your connection or server status.`
+    `Unable to connect to VisionVault API server at ${PRIMARY_API_URL}. The cloud server may be waking up. Please retry in a moment.`
   );
 };
 
