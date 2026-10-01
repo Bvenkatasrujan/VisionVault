@@ -329,14 +329,10 @@ export default function App() {
         if (!isGoogle && !user.emailVerified) {
           setAppState('EMAIL_VERIFICATION_PENDING');
         } else {
-          const configDone = localStorage.getItem(`vv_config_done_${user.uid}`);
-          if (configDone) {
-            setAppState('READY');
-            if (window.electronAPI && window.electronAPI.registerContextMenu) {
-              window.electronAPI.registerContextMenu();
-            }
-          } else {
-            setAppState('CONFIGURATION_PENDING');
+          localStorage.setItem(`vv_config_done_${user.uid}`, 'true');
+          setAppState('READY');
+          if (window.electronAPI && window.electronAPI.registerContextMenu) {
+            window.electronAPI.registerContextMenu();
           }
         }
       } else {
@@ -387,10 +383,22 @@ export default function App() {
       const user = userCredential.user;
       if (!user.emailVerified) {
         setAppState('EMAIL_VERIFICATION_PENDING');
+      } else {
+        localStorage.setItem(`vv_config_done_${user.uid}`, 'true');
+        setAppState('READY');
+        if (window.electronAPI && window.electronAPI.registerContextMenu) {
+          window.electronAPI.registerContextMenu();
+        }
       }
     } catch (err) {
       console.error("Desktop login failed:", err);
-      setAuthError("Invalid credentials or authentication error.");
+      if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
+        setAuthError("Invalid email or password. Please check your login credentials.");
+      } else if (err.code === 'auth/too-many-requests') {
+        setAuthError("Access temporarily blocked due to multiple failed login attempts. Please try again later.");
+      } else {
+        setAuthError(err.message || "Sign in failed. Please check your internet connection.");
+      }
     } finally {
       setAuthLoading(false);
     }
