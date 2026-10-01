@@ -74,6 +74,77 @@ def initialize_firebase_admin():
 
 initialize_firebase_admin()
 
+import time
+import json
+import urllib.request
+import jwt
+from jwt.algorithms import RSAAlgorithm
+
+_google_certs_cache = {}
+_google_certs_expires_at = 0
+
+def get_google_public_keys():
+    global _google_certs_cache, _google_certs_expires_at
+    now = time.time()
+    if _google_certs_cache and now < _google_certs_expires_at:
+        return _google_certs_cache
+
+    url = "https://www.googleapis.com/robot/v1/metadata/x509/securetoken@system.gserviceaccount.com"
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "VisionVault-Backend/2.0"})
+        with urllib.request.urlopen(req, timeout=10) as response:
+            certs = json.loads(response.read().decode("utf-8"))
+            cache_control = response.headers.get("Cache-Control", "")
+            max_age = 3600
+            for part in cache_control.split(","):
+                if "max-age=" in part:
+                    try:
+                        max_age = int(part.split("=")[1].strip())
+                    except Exception:
+                        pass
+            _google_certs_cache = certs
+            _google_certs_expires_at = now + max_age
+            return certs
+    except Exception as err:
+        print(f"Failed to fetch Google public certs: {err}")
+        return _google_certs_cache
+
+def verify_firebase_id_token_public(token: str) -> dict:
+    try:
+        header = jwt.get_unverified_header(token)
+        kid = header.get("kid")
+        if not kid:
+            raise HTTPException(status_code=401, detail="Invalid token: missing key ID (kid).")
+
+        certs = get_google_public_keys()
+        if kid not in certs:
+            # Clear cache & retry once
+            global _google_certs_expires_at
+            _google_certs_expires_at = 0
+            certs = get_google_public_keys()
+            if kid not in certs:
+                raise HTTPException(status_code=401, detail="Invalid token: signing key ID mismatch.")
+
+        cert_str = certs[kid]
+        public_key = RSAAlgorithm.from_jwk(cert_str) if cert_str.startswith("{") else cert_str
+
+        decoded = jwt.decode(
+            token,
+            key=public_key,
+            algorithms=["RS256"],
+            audience=FIREBASE_PROJECT_ID,
+            issuer=f"https://securetoken.google.com/{FIREBASE_PROJECT_ID}"
+        )
+        uid = decoded.get("user_id") or decoded.get("sub") or decoded.get("uid")
+        if not uid:
+            raise HTTPException(status_code=401, detail="Invalid token payload: missing user UID.")
+        decoded["uid"] = uid
+        return decoded
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Firebase authentication token has expired.")
+    except Exception as e:
+        raise HTTPException(status_code=401, detail=f"Invalid or unverified Firebase ID token: {str(e)}")
+
 security_scheme = HTTPBearer(auto_error=False)
 
 async def verify_firebase_token(credentials: HTTPAuthorizationCredentials = Security(security_scheme)) -> dict:
@@ -84,24 +155,15 @@ async def verify_firebase_token(credentials: HTTPAuthorizationCredentials = Secu
         )
 
     token = credentials.credentials
+    # 1. Primary: Verify via Firebase Admin SDK
     try:
         decoded_token = auth.verify_id_token(token)
         uid = decoded_token.get("uid")
-        if not uid:
-            raise HTTPException(status_code=401, detail="Invalid token payload. User ID missing.")
-        return decoded_token
+        if uid:
+            return decoded_token
     except Exception as e:
-        err_msg = str(e)
-        if "default credentials were not found" in err_msg.lower() or "credentials" in err_msg.lower():
-            sa_path = FIREBASE_SERVICE_ACCOUNT_PATH
-            print(f"Firebase Token Verification Failed: Missing service account credentials at '{sa_path}'")
-            raise HTTPException(
-                status_code=500,
-                detail=f"Backend Configuration Error: Firebase Admin service account key missing. Please place your service account JSON file in 'cv-service/secrets/'."
-            )
-        
-        print(f"Firebase token verification failed: {err_msg}")
-        raise HTTPException(
-            status_code=401,
-            detail=f"Invalid or expired Firebase authentication token: {err_msg}"
-        )
+        print(f"Firebase Admin SDK verify_id_token fallback required: {e}")
+
+    # 2. Resilient Fallback: Verify via Google RS256 Public X509 Certificates
+    return verify_firebase_id_token_public(token)
+
