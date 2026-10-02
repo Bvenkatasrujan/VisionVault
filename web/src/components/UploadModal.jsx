@@ -155,11 +155,26 @@ export const UploadModal = ({ isOpen, onClose, onUploadComplete }) => {
             </div>
           )}
 
-          {/* Success message */}
+          {/* Success message box */}
           {success && (
-            <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 flex items-center gap-2 text-sm font-medium">
-              <CheckCircle2 className="w-5 h-5 text-emerald-400 flex-shrink-0" />
-              <span>File successfully uploaded and saved to Firestore!</span>
+            <div className="p-5 rounded-2xl bg-emerald-500/10 border border-emerald-500/40 text-emerald-300 space-y-3 text-center animate-fade-in shadow-xl">
+              <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 flex items-center justify-center mx-auto animate-bounce">
+                <CheckCircle2 className="w-7 h-7" />
+              </div>
+              <div>
+                <h4 className="font-extrabold text-white text-base">✓ File Teleported Successfully!</h4>
+                <p className="text-xs text-slate-300 mt-1">
+                  Your file <span className="font-semibold text-emerald-400">{selectedFile?.name}</span> has been successfully teleported to your VisionVault cloud storage.
+                </p>
+              </div>
+              <div className="pt-1">
+                <button
+                  onClick={onClose}
+                  className="w-full py-2.5 rounded-xl font-bold text-xs bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg transition-all"
+                >
+                  Done
+                </button>
+              </div>
             </div>
           )}
 

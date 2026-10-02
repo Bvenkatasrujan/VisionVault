@@ -576,26 +576,7 @@ export default function App() {
 
     if (!selectedFileObj) return;
 
-    setTeleporting(true);
-    setCurrentProgress(0);
-    setTeleportSuccessMsg(null);
-
-    try {
-      await teleportFileToCloud({
-        file: selectedFileObj,
-        user: currentUser,
-        deviceId: deviceInfo.deviceId,
-        onProgress: (p) => setCurrentProgress(p),
-        onStatusChange: (status) => console.log("Teleport status:", status)
-      });
-      setTeleportSuccessMsg(`✓ ${selectedFileObj.name} successfully teleported to VisionVault!`);
-      setTimeout(() => setTeleportSuccessMsg(null), 4000);
-    } catch (err) {
-      console.error("Teleport failed:", err);
-      alert(`Teleport failed: ${err.message}`);
-    } finally {
-      setTeleporting(false);
-    }
+    processFileTeleport(selectedFileObj);
   };
 
   // 1. Splash Screen View (1.8s)
