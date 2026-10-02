@@ -72,8 +72,6 @@ export default function App() {
     platform: 'windows',
     appVersion: '1.0.0'
   });
-  const [autoVltEnabled, setAutoVltEnabled] = useState(true);
-  const [asVltPackage, setAsVltPackage] = useState(false);
   
   // Pending Teleport Queue & Teleport Modal States
   const [pendingTeleportQueue, setPendingTeleportQueue] = useState([]);
@@ -145,7 +143,6 @@ export default function App() {
       await teleportFileToCloud({
         file: targetFile,
         deviceId: deviceInfo.deviceId,
-        asVlt: autoVltEnabled,
         onProgress: (p) => {
           const scaled = Math.min(60 + Math.round(p * 0.25), 85);
           setCurrentProgress(scaled);
@@ -588,7 +585,6 @@ export default function App() {
         file: selectedFileObj,
         user: currentUser,
         deviceId: deviceInfo.deviceId,
-        asVlt: asVltPackage,
         onProgress: (p) => setCurrentProgress(p),
         onStatusChange: (status) => console.log("Teleport status:", status)
       });
@@ -1096,32 +1092,6 @@ export default function App() {
             )}
           </button>
 
-          {/* Options Switches */}
-          <div className="flex items-center justify-around text-xs pt-1 border-t border-slate-800/80">
-            <label className="flex items-center gap-2 cursor-pointer text-slate-300 hover:text-white">
-              <input
-                type="checkbox"
-                checked={asVltPackage}
-                onChange={(e) => setAsVltPackage(e.target.checked)}
-                className="w-3.5 h-3.5 accent-amber-500 rounded"
-              />
-              <span>Wrap as .VLT Container</span>
-            </label>
-
-            <div className="flex items-center gap-2">
-              <span className="text-slate-400">Automatic VLT Detection</span>
-              <button
-                onClick={() => setAutoVltEnabled(!autoVltEnabled)}
-                className={`px-2.5 py-0.5 rounded-md text-[10px] font-extrabold transition-all ${
-                  autoVltEnabled
-                    ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
-                    : 'bg-slate-800 text-slate-500 border border-slate-700'
-                }`}
-              >
-                {autoVltEnabled ? '[ ON ]' : '[ OFF ]'}
-              </button>
-            </div>
-          </div>
 
           {/* Windows Context Menu Status Banner */}
           <div className="p-2.5 rounded-xl bg-slate-950/60 border border-slate-800/80 text-[11px] text-slate-400 flex items-center justify-center gap-1.5">

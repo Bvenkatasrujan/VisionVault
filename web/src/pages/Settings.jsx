@@ -1,6 +1,6 @@
 import React from 'react';
 import { useAuth } from '../context/AuthContext';
-import { User, Shield, HardDrive, Zap, Info, Lock } from 'lucide-react';
+import { User, Shield, HardDrive, Info, Lock } from 'lucide-react';
 
 export const Settings = () => {
   const { currentUser, userProfile } = useAuth();
@@ -70,24 +70,13 @@ export const Settings = () => {
               <span className="font-semibold text-slate-200">Firebase Project:</span> visionvault-5566b
             </div>
             <div className="p-3 rounded-xl bg-slate-950/40 border border-slate-800">
-              <span className="font-semibold text-slate-200">Storage Bucket:</span> visionvault-5566b.firebasestorage.app
+              <span className="font-semibold text-slate-200">Storage Bucket:</span> visionvault-files
             </div>
           </div>
         </div>
       </div>
 
-      {/* VLT Teleport Specs Card */}
-      <div className="glass-panel p-6 rounded-3xl space-y-4">
-        <h3 className="font-bold text-slate-100 text-base flex items-center gap-2 border-b border-slate-800 pb-3">
-          <Zap className="w-4 h-4 text-amber-400 fill-amber-400" />
-          <span>VisionVault Teleport (.vlt) Specification</span>
-        </h3>
-
-        <p className="text-xs text-slate-300 leading-relaxed">
-          The `.vlt` file format is VisionVault's proprietary container package. It wraps any file with JSON envelope metadata, SHA-256 verification hash, original extension metadata, and Base64 encapsulated payload.
-        </p>
-      </div>
-
     </div>
   );
 };
+

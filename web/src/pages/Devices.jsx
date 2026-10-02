@@ -62,7 +62,7 @@ export const Devices = () => {
             </div>
             <div>
               <h3 className="font-bold text-slate-100 text-base">VisionVault Desktop Client (.exe)</h3>
-              <p className="text-xs text-slate-400">Cross-Device File Teleportation & VLT Watcher</p>
+              <p className="text-xs text-slate-400">Cross-Device File Teleportation Engine</p>
             </div>
           </div>
           <a

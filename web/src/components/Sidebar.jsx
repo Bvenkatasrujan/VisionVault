@@ -58,10 +58,10 @@ export const Sidebar = ({ totalFiles = 0, storageUsed = 0 }) => {
         <div className="p-4 rounded-2xl bg-gradient-to-br from-indigo-950/40 to-slate-900/80 border border-indigo-500/20 space-y-2.5">
           <div className="flex items-center gap-2 text-indigo-300 font-semibold text-xs uppercase tracking-wider">
             <Zap className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
-            <span>.VLT Teleport Active</span>
+            <span>File Teleport Active</span>
           </div>
           <p className="text-xs text-slate-300 leading-relaxed">
-            Drop `.vlt` teleport files directly into the vault or send them wirelessly from your Desktop app.
+            Teleport files directly into your cloud vault or send them seamlessly from your Desktop app.
           </p>
         </div>
 

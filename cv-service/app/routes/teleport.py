@@ -20,7 +20,6 @@ router = APIRouter(prefix="/api/teleport", tags=["teleport"])
 async def teleport_upload(
     file: UploadFile = File(...),
     deviceId: str = Form("desktop_win"),
-    asVlt: bool = Form(False),
     token_data: dict = Depends(verify_firebase_token)
 ):
     uid = token_data["uid"]
@@ -65,7 +64,6 @@ async def teleport_upload(
         update_teleport_job(job_id, {"progress": 75, "status": "processing"})
         
         # 4. Create Firestore File Record
-        is_vlt = safe_filename.endswith(".vlt") or asVlt
         file_doc_data = {
             "fileId": file_id,
             "ownerId": uid,
@@ -76,10 +74,8 @@ async def teleport_upload(
             "size": len(contents),
             "storagePath": storage_path,
             "downloadURL": None,
-            "source": "vlt" if is_vlt else "desktop",
+            "source": "desktop",
             "status": "completed",
-            "isVlt": is_vlt,
-            "vltVersion": "1.0" if is_vlt else None,
             "checksum": checksum,
             "cvProcessed": False,
             "createdAt": now_iso,

@@ -7,7 +7,6 @@ import { X, UploadCloud, CheckCircle2, AlertCircle, Zap, File } from 'lucide-rea
 export const UploadModal = ({ isOpen, onClose, onUploadComplete }) => {
   const { currentUser } = useAuth();
   const [selectedFile, setSelectedFile] = useState(null);
-  const [asVltPackage, setAsVltPackage] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState(null);
@@ -48,7 +47,6 @@ export const UploadModal = ({ isOpen, onClose, onUploadComplete }) => {
       file: selectedFile,
       user: currentUser,
       source: 'web',
-      asVltPackage,
       onProgress: (p) => setProgress(p),
       onSuccess: (fileDoc) => {
         setUploading(false);
@@ -115,7 +113,7 @@ export const UploadModal = ({ isOpen, onClose, onUploadComplete }) => {
                   Click to select file or drag & drop
                 </p>
                 <p className="text-xs text-slate-500 mt-1">
-                  Supports documents, images, videos, `.vlt`, archives & more
+                  Supports documents, images, videos, audio, archives & more
                 </p>
               </label>
             </div>
@@ -138,32 +136,6 @@ export const UploadModal = ({ isOpen, onClose, onUploadComplete }) => {
                   <X className="w-4 h-4" />
                 </button>
               )}
-            </div>
-          )}
-
-          {/* Option: Packaging as .vlt Teleport File */}
-          {selectedFile && !uploading && !success && (
-            <div 
-              onClick={() => setAsVltPackage(!asVltPackage)}
-              className={`p-3.5 rounded-xl border cursor-pointer transition-all flex items-center justify-between ${
-                asVltPackage 
-                  ? 'bg-amber-500/10 border-amber-500/40 text-amber-300' 
-                  : 'bg-slate-950/40 border-slate-800 text-slate-400 hover:border-slate-700'
-              }`}
-            >
-              <div className="flex items-center gap-2.5">
-                <Zap className={`w-4 h-4 ${asVltPackage ? 'text-amber-400 fill-amber-400' : 'text-slate-500'}`} />
-                <div>
-                  <p className="text-xs font-semibold text-slate-200">Wrap as .vlt Teleport File</p>
-                  <p className="text-[11px] text-slate-400">Encapsulate with metadata & checksum container</p>
-                </div>
-              </div>
-              <input
-                type="checkbox"
-                checked={asVltPackage}
-                onChange={() => {}}
-                className="w-4 h-4 accent-amber-500 rounded"
-              />
             </div>
           )}
 

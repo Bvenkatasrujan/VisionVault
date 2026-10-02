@@ -51,19 +51,8 @@ export const getFileExtension = (filename) => {
   return parts.length > 1 ? `.${parts.pop().toLowerCase()}` : '';
 };
 
-export const getFileTypeInfo = (filename, mimeType, isVlt) => {
+export const getFileTypeInfo = (filename, mimeType) => {
   const ext = getFileExtension(filename);
-  
-  if (isVlt || ext === '.vlt') {
-    return {
-      type: 'VLT Teleport',
-      icon: Zap,
-      color: 'text-amber-400',
-      bgColor: 'bg-amber-500/10',
-      borderColor: 'border-amber-500/30',
-      badgeBg: 'bg-amber-500/20 text-amber-300'
-    };
-  }
 
   if (ext === '.pdf') {
     return {

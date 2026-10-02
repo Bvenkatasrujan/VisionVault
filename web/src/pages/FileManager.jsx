@@ -3,7 +3,6 @@ import { useAuth } from '../context/AuthContext';
 import { subscribeUserFiles, deleteFileFromVault } from '../services/fileService';
 import { getFileExtension, parseTimestampMs } from '../utils/fileHelpers';
 import { FileCard } from '../components/FileCard';
-import { VltInspectorModal } from '../components/VltInspectorModal';
 import { 
   FolderLock, 
   Search, 
@@ -14,7 +13,6 @@ import {
   FileText, 
   Image as ImageIcon, 
   Film, 
-  Zap, 
   Laptop, 
   Globe,
   SlidersHorizontal
@@ -28,7 +26,6 @@ export const FileManager = ({ onOpenUpload, externalSearchQuery }) => {
   const [selectedSource, setSelectedSource] = useState('all');
   const [sortBy, setSortBy] = useState('newest');
   const [viewMode, setViewMode] = useState('grid');
-  const [inspectedVlt, setInspectedVlt] = useState(null);
 
   useEffect(() => {
     if (externalSearchQuery !== undefined) {
@@ -59,9 +56,7 @@ export const FileManager = ({ onOpenUpload, externalSearchQuery }) => {
       }
 
       // 3. Category Filter
-      if (selectedCategory === 'vlt') {
-        if (!file.isVlt && file.extension !== '.vlt') return false;
-      } else if (selectedCategory === 'documents') {
+      if (selectedCategory === 'documents') {
         const ext = getFileExtension(file.displayName);
         if (!['.pdf', '.docx', '.doc', '.txt', '.md'].includes(ext)) return false;
       } else if (selectedCategory === 'images') {
@@ -136,7 +131,6 @@ export const FileManager = ({ onOpenUpload, externalSearchQuery }) => {
               <option value="all">All Sources</option>
               <option value="web">Web Uploads</option>
               <option value="desktop">Desktop Teleport</option>
-              <option value="vlt">VLT Files</option>
             </select>
 
             {/* Sort Dropdown */}
@@ -176,7 +170,6 @@ export const FileManager = ({ onOpenUpload, externalSearchQuery }) => {
         <div className="flex items-center gap-2 overflow-x-auto pt-1 pb-0.5 scrollbar-none">
           {[
             { id: 'all', label: 'All Files', icon: FolderLock },
-            { id: 'vlt', label: '.VLT Teleport', icon: Zap },
             { id: 'documents', label: 'Documents', icon: FileText },
             { id: 'images', label: 'Images', icon: ImageIcon },
             { id: 'videos', label: 'Videos', icon: Film },
@@ -220,19 +213,12 @@ export const FileManager = ({ onOpenUpload, externalSearchQuery }) => {
               key={file.fileId}
               file={file}
               onDelete={deleteFileFromVault}
-              onInspectVlt={(f) => setInspectedVlt(f)}
             />
           ))}
         </div>
       )}
 
-      {/* VLT Inspector Modal */}
-      <VltInspectorModal
-        isOpen={!!inspectedVlt}
-        onClose={() => setInspectedVlt(null)}
-        file={inspectedVlt}
-      />
-
     </div>
   );
 };
+

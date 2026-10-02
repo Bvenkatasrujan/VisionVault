@@ -4,15 +4,12 @@ import { subscribeUserFiles, deleteFileFromVault } from '../services/fileService
 import { subscribeUserDevices } from '../services/deviceService';
 import { formatFileSize } from '../utils/fileHelpers';
 import { FileCard } from '../components/FileCard';
-import { VltInspectorModal } from '../components/VltInspectorModal';
 import { 
   FolderLock, 
   HardDrive, 
   Laptop, 
-  Zap, 
   UploadCloud, 
   ArrowRight, 
-  Sparkles,
   ShieldCheck,
   Plus
 } from 'lucide-react';
@@ -22,7 +19,6 @@ export const Dashboard = ({ onOpenUpload }) => {
   const { currentUser, userProfile } = useAuth();
   const [files, setFiles] = useState([]);
   const [devices, setDevices] = useState([]);
-  const [inspectedVlt, setInspectedVlt] = useState(null);
 
   useEffect(() => {
     if (!currentUser) return;
@@ -37,7 +33,6 @@ export const Dashboard = ({ onOpenUpload }) => {
   const displayName = userProfile?.displayName || currentUser?.displayName || currentUser?.email?.split('@')[0] || 'User';
 
   const totalStorageBytes = files.reduce((acc, file) => acc + (file.size || 0), 0);
-  const vltFilesCount = files.filter(f => f.isVlt || f.extension === '.vlt').length;
   const onlineDevices = devices.filter(d => d.status === 'online').length;
 
   const recentFiles = files.slice(0, 6);
@@ -58,7 +53,7 @@ export const Dashboard = ({ onOpenUpload }) => {
               Welcome back, <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-300 to-indigo-300">{displayName}</span>
             </h1>
             <p className="text-sm text-slate-300 max-w-xl">
-              Teleport files instantly between your desktop & cloud storage with `.vlt` package support.
+              Teleport files instantly between your desktop & cloud storage.
             </p>
           </div>
 
@@ -75,7 +70,7 @@ export const Dashboard = ({ onOpenUpload }) => {
       </div>
 
       {/* Metrics Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         
         {/* Total Files */}
         <div className="glass-panel p-5 rounded-2xl flex items-center justify-between">
@@ -94,7 +89,7 @@ export const Dashboard = ({ onOpenUpload }) => {
           <div className="space-y-1">
             <p className="text-xs font-medium text-slate-400">Storage Used</p>
             <p className="text-2xl font-extrabold text-white">{formatFileSize(totalStorageBytes)}</p>
-            <p className="text-[11px] text-slate-500">Firebase storage bucket</p>
+            <p className="text-[11px] text-slate-500">Supabase storage bucket</p>
           </div>
           <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center">
             <HardDrive className="w-6 h-6" />
@@ -113,18 +108,6 @@ export const Dashboard = ({ onOpenUpload }) => {
           </div>
         </div>
 
-        {/* VLT Teleports */}
-        <div className="glass-panel p-5 rounded-2xl flex items-center justify-between">
-          <div className="space-y-1">
-            <p className="text-xs font-medium text-slate-400">VLT Teleports</p>
-            <p className="text-2xl font-extrabold text-amber-400">{vltFilesCount}</p>
-            <p className="text-[11px] text-slate-500">Encapsulated .vlt files</p>
-          </div>
-          <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center">
-            <Zap className="w-6 h-6 fill-amber-400" />
-          </div>
-        </div>
-
       </div>
 
       {/* Main Section: Recent Uploads */}
@@ -132,7 +115,7 @@ export const Dashboard = ({ onOpenUpload }) => {
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-xl font-bold text-white">Recent Vault Files</h2>
-            <p className="text-xs text-slate-400">Latest uploaded documents & teleport packages</p>
+            <p className="text-xs text-slate-400">Latest uploaded documents & media files</p>
           </div>
           <Link
             to="/files"
@@ -169,19 +152,11 @@ export const Dashboard = ({ onOpenUpload }) => {
                 key={file.fileId}
                 file={file}
                 onDelete={deleteFileFromVault}
-                onInspectVlt={(f) => setInspectedVlt(f)}
               />
             ))}
           </div>
         )}
       </div>
-
-      {/* VLT Inspector Modal */}
-      <VltInspectorModal
-        isOpen={!!inspectedVlt}
-        onClose={() => setInspectedVlt(null)}
-        file={inspectedVlt}
-      />
 
     </div>
   );

@@ -8,7 +8,6 @@ import {
 } from '../firebase/config';
 import { parseTimestampMs } from '../utils/fileHelpers';
 import { getCurrentFirebaseIdToken } from './firebaseAuth';
-import { isVltFile, createVltPackage } from '../utils/vltHandler';
 
 const PRIMARY_API_URL = import.meta.env.VITE_API_URL || 'https://visionvault-api.onrender.com';
 const FALLBACK_ENDPOINTS = [
@@ -47,20 +46,13 @@ const fetchWithApiFallback = async (endpointPath, fetchOptions) => {
 export const uploadFileToVault = ({
   file,
   source = 'web',
-  asVltPackage = false,
   onProgress,
   onSuccess,
   onError
 }) => {
   const prepareAndUpload = async () => {
     try {
-      let fileToUpload = file;
-      let isVlt = isVltFile(file);
-
-      if (asVltPackage && !isVlt) {
-        const packaged = await createVltPackage(file);
-        fileToUpload = packaged.vltFile;
-      }
+      const fileToUpload = file;
 
       // Obtain Firebase ID Token reliably from central auth helper
       const idToken = await getCurrentFirebaseIdToken();
@@ -69,7 +61,6 @@ export const uploadFileToVault = ({
         const formData = new FormData();
         formData.append('file', fileToUpload);
         formData.append('source', source);
-        formData.append('asVltPackage', asVltPackage ? 'true' : 'false');
         return formData;
       };
 

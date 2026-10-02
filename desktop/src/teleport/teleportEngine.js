@@ -1,5 +1,4 @@
 import { getCurrentFirebaseIdToken } from '../services/firebaseAuth';
-import { isVltFilename, createVltPackageFromFile } from './vltEngine';
 
 const PRIMARY_API_URL = import.meta.env.VITE_API_URL || 'https://visionvault-api.onrender.com';
 const FALLBACK_ENDPOINTS = [
@@ -45,22 +44,13 @@ const fetchWithEndpointFallback = async (endpointPath, fetchOptions, onStatusCha
 export const teleportFileToCloud = async ({
   file,
   deviceId,
-  asVlt = false,
   onProgress,
   onStatusChange
 }) => {
   let idToken = await getCurrentFirebaseIdToken();
 
   try {
-    let uploadTargetFile = file;
-    let isVltFile = isVltFilename(file.name);
-
-    if (asVlt && !isVltFile) {
-      if (onStatusChange) onStatusChange('processing', { status: 'processing', fileName: file.name });
-      const packaged = await createVltPackageFromFile(file);
-      uploadTargetFile = packaged.vltFile;
-      isVltFile = true;
-    }
+    const uploadTargetFile = file;
 
     if (onStatusChange) onStatusChange('uploading', { status: 'uploading', fileName: uploadTargetFile.name });
     if (onProgress) onProgress(30);
@@ -69,7 +59,6 @@ export const teleportFileToCloud = async ({
       const formData = new FormData();
       formData.append('file', uploadTargetFile);
       formData.append('deviceId', deviceId || 'desktop_win');
-      formData.append('asVlt', asVlt ? 'true' : 'false');
       return formData;
     };
 

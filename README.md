@@ -2,7 +2,7 @@
 
 > **Your Files. One Vault. Anywhere.**
 
-VisionVault is an intelligent cloud file-management and cross-device file-teleportation platform powered by React, Electron, Firebase (`visionvault-5566b`), a custom `.vlt` (VisionVault Teleport File) engine, and a foundation for Computer Vision intelligence.
+VisionVault is an intelligent cloud file-management and cross-device file-teleportation platform powered by React, Electron, Firebase (`visionvault-5566b`), Supabase Storage (`visionvault-files`), and a foundation for Computer Vision intelligence.
 
 ---
 
@@ -41,12 +41,12 @@ VisionVault is an intelligent cloud file-management and cross-device file-telepo
 VisionVault/
 ├── web/                           # React + Vite Web Application
 │   ├── src/
-│   │   ├── components/            # Navbar, Sidebar, FileCard, DeviceCard, UploadModal, VltInspectorModal
+│   │   ├── components/            # Navbar, Sidebar, FileCard, DeviceCard, UploadModal
 │   │   ├── pages/                 # Login, Register, ForgotPassword, Dashboard, FileManager, Devices, Settings
 │   │   ├── context/               # AuthContext (Firebase authentication state)
 │   │   ├── firebase/              # Firebase configuration & exports
 │   │   ├── services/              # fileService, deviceService
-│   │   └── utils/                 # fileHelpers, vltHandler
+│   │   └── utils/                 # fileHelpers
 │   ├── package.json
 │   └── vite.config.js
 │
@@ -54,7 +54,7 @@ VisionVault/
 │   ├── src/
 │   │   ├── main/                  # Electron main process & IPC handlers
 │   │   ├── renderer/              # React desktop UI (App.jsx, main.jsx)
-│   │   ├── teleport/              # Teleport Engine, VLT Package Engine, Watcher
+│   │   ├── teleport/              # Teleport Engine
 │   │   └── firebase/              # Desktop Firebase setup
 │   ├── electron-builder.yml       # Windows setup.exe builder configuration
 │   └── package.json
@@ -102,25 +102,9 @@ const firebaseConfig = {
 
 ---
 
-## 4. Custom `.vlt` Format (VisionVault Teleport File)
+## 4. Ordinary File Teleportation
 
-`.vlt` is VisionVault's proprietary container package. It encapsulates any file along with JSON envelope metadata, SHA-256 verification checksums, and Base64 encoded file payload stream.
-
-### `.vlt` JSON Specification
-```json
-{
-  "format": "VLT",
-  "vltVersion": "1.0",
-  "originalName": "project.pdf",
-  "originalType": "application/pdf",
-  "size": 2456789,
-  "checksum": "vlt_1727000000_a1b2c3d",
-  "createdAt": "2026-09-22T14:00:00Z",
-  "payload": "data:application/pdf;base64,..."
-}
-```
-
-The Web Application includes a **VLT Teleport Inspector** to unpack and extract original files from `.vlt` containers.
+VisionVault's teleportation engine delivers direct, end-to-end file transfers. Any standard file is authenticated using Firebase ID Tokens, uploaded through the HTTPS FastAPI microservice (`cv-service`), validated, stored in private Supabase Storage (`visionvault-files`), and registered in Firestore metadata under the authenticated user's UID.
 
 ---
 
@@ -206,7 +190,7 @@ uvicorn app.main:app --reload --port 8000
 7. Log in with `user@example.com`.
 8. Desktop displays `🟢 Connected` and registers device in Firestore under `users/{uid}/devices/`.
 9. Click **[ TELEPORT FILE ]** in Desktop app.
-10. Select `image.png` (or wrap as `.vlt`).
-11. File is uploaded to Firebase with `source: "desktop"`.
+10. Select `image.png`.
+11. File is uploaded to Firebase/Supabase with `source: "desktop"`.
 12. Web dashboard updates automatically via Firestore real-time listener showing `image.png`.
-13. Download or inspect `.vlt` file from the website.
+13. Download file securely from the website.

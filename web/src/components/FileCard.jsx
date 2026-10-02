@@ -13,21 +13,19 @@ import {
   Loader2
 } from 'lucide-react';
 
-export const FileCard = ({ file, onDelete, onInspectVlt }) => {
+export const FileCard = ({ file, onDelete }) => {
   const { currentUser } = useAuth();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [downloading, setDownloading] = useState(false);
 
-  const typeInfo = getFileTypeInfo(file.displayName, file.mimeType, file.isVlt);
+  const typeInfo = getFileTypeInfo(file.displayName, file.mimeType);
   const Icon = typeInfo.icon;
 
   const getSourceIcon = (source) => {
     switch (source) {
       case 'desktop':
         return { label: 'Desktop', icon: Laptop, color: 'text-indigo-400 bg-indigo-500/10 border-indigo-500/30' };
-      case 'vlt':
-        return { label: 'VLT Teleport', icon: Zap, color: 'text-amber-400 bg-amber-500/10 border-amber-500/30' };
       default:
         return { label: 'Web Vault', icon: Globe, color: 'text-brand-400 bg-brand-500/10 border-brand-500/30' };
     }
@@ -102,20 +100,9 @@ export const FileCard = ({ file, onDelete, onInspectVlt }) => {
       {/* Action Footer */}
       <div className="flex items-center justify-between pt-3 mt-3 border-t border-slate-800/80">
         
-        {/* VLT Inspector button if VLT file */}
-        {file.isVlt || file.extension === '.vlt' ? (
-          <button
-            onClick={() => onInspectVlt && onInspectVlt(file)}
-            className="flex items-center gap-1.5 text-xs font-semibold text-amber-400 hover:text-amber-300 transition-colors"
-          >
-            <Eye className="w-3.5 h-3.5" />
-            <span>Inspect VLT</span>
-          </button>
-        ) : (
-          <span className="text-[11px] font-mono text-slate-500 uppercase">
-            {file.extension || 'FILE'}
-          </span>
-        )}
+        <span className="text-[11px] font-mono text-slate-500 uppercase">
+          {file.extension || 'FILE'}
+        </span>
 
         {/* Action Buttons */}
         <div className="flex items-center gap-1">

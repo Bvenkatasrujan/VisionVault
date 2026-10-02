@@ -13,7 +13,6 @@ router = APIRouter(prefix="/api/storage", tags=["storage"])
 @router.post("/upload")
 async def upload_file(
     file: UploadFile = File(...),
-    asVltPackage: bool = Form(False),
     source: str = Form("web"),
     token_data: dict = Depends(verify_firebase_token)
 ):
@@ -48,8 +47,6 @@ async def upload_file(
             "downloadURL": None, # Download URLs generated on-demand securely via API
             "source": source,
             "status": "completed",
-            "isVlt": safe_filename.endswith(".vlt"),
-            "vltVersion": "1.0" if safe_filename.endswith(".vlt") else None,
             "checksum": checksum,
             "cvProcessed": False,
             "createdAt": now_iso,
