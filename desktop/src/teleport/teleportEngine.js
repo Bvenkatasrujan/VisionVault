@@ -7,7 +7,7 @@ const FALLBACK_ENDPOINTS = [
   'https://visionvault-api.onrender.com'
 ];
 
-const fetchWithTimeout = async (url, options, timeoutMs = 6000) => {
+const fetchWithTimeout = async (url, options, timeoutMs = 120000) => {
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), timeoutMs);
   try {
@@ -36,7 +36,7 @@ const fetchWithEndpointFallback = async (endpointPath, makeOptions, onStatusChan
         onStatusChange('waking_up', { status: 'waking_up', detail: `Connecting to cloud server (${cleanBase})...` });
       }
       const options = typeof makeOptions === 'function' ? makeOptions() : makeOptions;
-      const response = await fetchWithTimeout(fullUrl, options, 8000);
+      const response = await fetchWithTimeout(fullUrl, options, 120000);
       return response;
     } catch (err) {
       console.warn(`Endpoint attempt failed for ${fullUrl}:`, err.message);
