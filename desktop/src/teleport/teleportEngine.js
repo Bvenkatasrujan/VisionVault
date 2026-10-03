@@ -7,8 +7,22 @@ const FALLBACK_ENDPOINTS = [
   'https://visionvault-api.onrender.com'
 ];
 
+const fetchWithTimeout = async (url, options, timeoutMs = 6000) => {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal
+    });
+    return response;
+  } finally {
+    clearTimeout(id);
+  }
+};
+
 // Helper to attempt fetch across endpoints with auto-retry & Render wake-up support
-const fetchWithEndpointFallback = async (endpointPath, fetchOptions, onStatusChange) => {
+const fetchWithEndpointFallback = async (endpointPath, makeOptions, onStatusChange) => {
   let lastError = null;
   const targetEndpoints = Array.from(new Set(FALLBACK_ENDPOINTS.filter(Boolean)));
 
@@ -17,27 +31,22 @@ const fetchWithEndpointFallback = async (endpointPath, fetchOptions, onStatusCha
     const cleanBase = baseUrl.replace(/\/+$/, '');
     const fullUrl = `${cleanBase}${endpointPath}`;
     
-    // Attempt up to 5 retries per endpoint to allow Render free tier backend to spin up (cold start ~30s)
-    for (let attempt = 1; attempt <= 5; attempt++) {
-      try {
-        if (onStatusChange && attempt >= 2) {
-          onStatusChange('waking_up', { status: 'waking_up', detail: `Waking up cloud server (attempt ${attempt}/5)...` });
-        }
-        const response = await fetch(fullUrl, fetchOptions);
-        return response;
-      } catch (err) {
-        console.warn(`Fetch attempt ${attempt} failed for ${fullUrl}:`, err.message);
-        lastError = err;
-        if (attempt < 5) {
-          await new Promise(r => setTimeout(r, 3000));
-        }
+    try {
+      if (onStatusChange && i >= 1) {
+        onStatusChange('waking_up', { status: 'waking_up', detail: `Connecting to cloud server (${cleanBase})...` });
       }
+      const options = typeof makeOptions === 'function' ? makeOptions() : makeOptions;
+      const response = await fetchWithTimeout(fullUrl, options, 8000);
+      return response;
+    } catch (err) {
+      console.warn(`Endpoint attempt failed for ${fullUrl}:`, err.message);
+      lastError = err;
     }
   }
 
   // If all endpoints failed
   throw new Error(
-    `Unable to connect to VisionVault API server at ${PRIMARY_API_URL}. The server may be waking up or offline. Please try again in a few seconds.`
+    `Unable to connect to VisionVault API server at ${PRIMARY_API_URL}. Details: ${lastError?.message || 'Server unreachable'}`
   );
 };
 
@@ -55,22 +64,22 @@ export const teleportFileToCloud = async ({
     if (onStatusChange) onStatusChange('uploading', { status: 'uploading', fileName: uploadTargetFile.name });
     if (onProgress) onProgress(30);
 
-    const createFormData = () => {
+    const makeUploadOptions = (token) => {
       const formData = new FormData();
       formData.append('file', uploadTargetFile);
       formData.append('deviceId', deviceId || 'desktop_win');
-      return formData;
+      return {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formData
+      };
     };
 
     let response = await fetchWithEndpointFallback(
       '/api/teleport/upload',
-      {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${idToken}`
-        },
-        body: createFormData()
-      },
+      () => makeUploadOptions(idToken),
       onStatusChange
     );
 
@@ -80,13 +89,7 @@ export const teleportFileToCloud = async ({
       idToken = await getCurrentFirebaseIdToken(true);
       response = await fetchWithEndpointFallback(
         '/api/teleport/upload',
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${idToken}`
-          },
-          body: createFormData()
-        },
+        () => makeUploadOptions(idToken),
         onStatusChange
       );
     }

@@ -16,30 +16,39 @@ const FALLBACK_ENDPOINTS = [
   'https://visionvault-api.onrender.com'
 ];
 
-const fetchWithApiFallback = async (endpointPath, fetchOptions) => {
-  let lastError = null;
+const fetchWithTimeout = async (url, options, timeoutMs = 5000) => {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal
+    });
+    return response;
+  } finally {
+    clearTimeout(id);
+  }
+};
+
+const fetchWithApiFallback = async (endpointPath, makeOptions) => {
   const targetEndpoints = Array.from(new Set(FALLBACK_ENDPOINTS.filter(Boolean)));
+  let lastError = null;
 
   for (const baseUrl of targetEndpoints) {
     const cleanBase = baseUrl.replace(/\/+$/, '');
     const fullUrl = `${cleanBase}${endpointPath}`;
-    
-    for (let attempt = 1; attempt <= 5; attempt++) {
-      try {
-        const response = await fetch(fullUrl, fetchOptions);
-        return response;
-      } catch (err) {
-        console.warn(`Fetch attempt ${attempt} failed for ${fullUrl}:`, err.message);
-        lastError = err;
-        if (attempt < 5) {
-          await new Promise(r => setTimeout(r, 3000));
-        }
-      }
+    try {
+      const options = typeof makeOptions === 'function' ? makeOptions() : makeOptions;
+      const response = await fetchWithTimeout(fullUrl, options, 6000);
+      return response;
+    } catch (err) {
+      console.warn(`Endpoint connection failed for ${fullUrl}:`, err.message);
+      lastError = err;
     }
   }
 
   throw new Error(
-    `Unable to connect to VisionVault API server at ${PRIMARY_API_URL}. The cloud server may be waking up. Please retry in a moment.`
+    `Unable to connect to VisionVault API server. Server may be waking up. Details: ${lastError?.message || 'Server unreachable'}`
   );
 };
 
@@ -57,21 +66,19 @@ export const uploadFileToVault = ({
       // Obtain Firebase ID Token reliably from central auth helper
       const idToken = await getCurrentFirebaseIdToken();
 
-      const createFormData = () => {
+      if (onProgress) onProgress(20);
+
+      const response = await fetchWithApiFallback('/api/storage/upload', () => {
         const formData = new FormData();
         formData.append('file', fileToUpload);
         formData.append('source', source);
-        return formData;
-      };
-
-      if (onProgress) onProgress(20);
-
-      const response = await fetchWithApiFallback('/api/storage/upload', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${idToken}`
-        },
-        body: createFormData()
+        return {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${idToken}`
+          },
+          body: formData
+        };
       });
 
       if (onProgress) onProgress(90);

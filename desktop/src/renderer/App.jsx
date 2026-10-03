@@ -231,12 +231,20 @@ export default function App() {
     const handleIncomingFileInfo = async (fileInfo) => {
       if (!fileInfo || !fileInfo.filePath) return;
       try {
-        let blob;
-        try {
-          const res = await fetch(`file://${fileInfo.filePath}`);
-          blob = await res.blob();
-        } catch (e) {
-          blob = new Blob(["[Teleported Content]"], { type: "application/octet-stream" });
+        let blob = null;
+        if (window.electronAPI && window.electronAPI.readFileBytes) {
+          const buffer = await window.electronAPI.readFileBytes(fileInfo.filePath);
+          if (buffer) {
+            blob = new Blob([buffer], { type: "application/octet-stream" });
+          }
+        }
+        if (!blob) {
+          try {
+            const res = await fetch(`file://${fileInfo.filePath}`);
+            blob = await res.blob();
+          } catch (e) {
+            blob = new Blob(["[Teleported Content]"], { type: "application/octet-stream" });
+          }
         }
         const targetFile = new File([blob], fileInfo.fileName, { type: blob.type || "application/octet-stream" });
         
@@ -553,13 +561,22 @@ export default function App() {
     if (window.electronAPI && window.electronAPI.selectFile) {
       const nativeFile = await window.electronAPI.selectFile();
       if (!nativeFile) return;
-      try {
-        const res = await fetch(`file://${nativeFile.filePath}`);
-        const blob = await res.blob();
-        selectedFileObj = new File([blob], nativeFile.fileName, { type: blob.type });
-      } catch (e) {
-        selectedFileObj = new File(["[Teleported Content]"], nativeFile.fileName);
+      let blob = null;
+      if (window.electronAPI && window.electronAPI.readFileBytes) {
+        const buffer = await window.electronAPI.readFileBytes(nativeFile.filePath);
+        if (buffer) {
+          blob = new Blob([buffer], { type: "application/octet-stream" });
+        }
       }
+      if (!blob) {
+        try {
+          const res = await fetch(`file://${nativeFile.filePath}`);
+          blob = await res.blob();
+        } catch (e) {
+          blob = new Blob(["[Teleported Content]"], { type: "application/octet-stream" });
+        }
+      }
+      selectedFileObj = new File([blob], nativeFile.fileName, { type: blob.type || "application/octet-stream" });
     } else {
       const input = document.createElement('input');
       input.type = 'file';

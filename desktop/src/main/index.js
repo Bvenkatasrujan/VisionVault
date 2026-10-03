@@ -221,4 +221,18 @@ ipcMain.handle('open-external', async (event, url) => {
   return false;
 });
 
+ipcMain.handle('read-file-bytes', async (event, targetFilePath) => {
+  try {
+    if (!targetFilePath || typeof targetFilePath !== 'string') return null;
+    const cleanPath = path.resolve(targetFilePath);
+    if (!fs.existsSync(cleanPath)) return null;
+    const buffer = fs.readFileSync(cleanPath);
+    return buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength);
+  } catch (err) {
+    console.error(`Failed to read file bytes for ${targetFilePath}:`, err);
+    return null;
+  }
+});
+
+
 
