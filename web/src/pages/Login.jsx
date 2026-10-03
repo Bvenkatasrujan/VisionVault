@@ -196,7 +196,7 @@ export const Login = () => {
             Create your account inside the Desktop Application, then use the same credentials to access your cloud vault from anywhere on the web.
           </p>
           <a
-            href="https://github.com/Bvenkatasrujan/VisionVault/releases/download/v1.0.8/VisionVault.Setup.exe"
+            href="https://github.com/Bvenkatasrujan/VisionVault/releases/download/v1.1.0/VisionVault.Setup.exe"
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-brand-300 border border-brand-500/30 transition-all shadow-sm"
